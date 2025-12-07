@@ -1,93 +1,102 @@
 # 🛒 Enterprise Retail Sales Forecasting Pipeline (Armstrong Cycle Implementation)
 
-## 1. Project Overview
-This repository contains an End-to-End Machine Learning Pipeline designed to predict daily retail sales in a high-volume FMCG environment (modeled after **NTUC FairPrice** operations).
+## 1. Project Overview & Context
+This repository contains an **End-to-End Machine Learning Pipeline** designed to predict daily retail sales in high-volume FMCG environments (modeled after operations at **NTUC FairPrice**).
 
-Unlike standard forecasting tools, this project addresses the specific challenge of "dirty" retail data and complex seasonality by combining **Automated ETL** with the **Martin Armstrong Economic Confidence Model (ECM)**.
+### ⚠️ A Note on Data Privacy & Synthetic Data
+Due to the proprietary nature of real-world retail sales data, **actual historical datasets cannot be shared publicly.**
 
-### Key Capabilities
-* **Automated Data Cleaning:** A "Universal Scraper" that handles inconsistent Excel headers and messy formats automatically.
-* **Advanced Feature Engineering:** Custom Scikit-Learn Transformers that mathematically model long-term economic cycles (8.6 years) alongside short-term business seasonality.
-* **Simulation Mode:** Built-in synthetic data generator to stress-test the model when historical client data is sparse.
+To ensure this repository is fully functional for reviewers and developers, I have included a **Synthetic Data Generator (`datagen.py`)**.
+* **What it does:** Generates 5 years of realistic daily sales data (2015–2020) with injected seasonality, trends, and noise.
+* **Why:** It allows you to verify the **Armstrong Cycle** logic and pipeline stability without needing access to private corporate data.
 
 ---
 
-## 2. Folder Structure
-The project follows a modular production-grade structure:
+## 2. Key Capabilities
+* **Universal Data Scraper:** A robust ETL module that ingests "dirty" Excel reports (`.xls`, `.xlsx`). It uses **Smart Header Detection** to ignore report titles and find the actual data tables automatically.
+* **Armstrong Cycle Logic:** Custom Scikit-Learn Transformers that feature engineer **Economic Confidence Cycles (8.6 years)** and **Business Seasonality (365 days)** from simple date stamps.
+* **Dual-Mode Execution:** Switch seamlessly between **Simulation Mode** (Synthetic Data) and **Production Mode** (Real Excel Files).
+
+---
+
+## 3. Folder Structure
+The project follows a modular, production-grade structure:
 
 * **`data`**:
-    * `raw/`: Drop messy Excel files here (supports `.xls` and `.xlsx`).
-    * `processed/`: Contains the merged CSVs and synthetic datasets.
+    * `raw/`: **(Input)** Drop your messy Excel files here.
+    * `processed/`: **(Output)** Stores cleaned CSVs and synthetic datasets.
 * **`src`**:
-    * `data_cleaner.py`: Smart header detection logic to ingest inconsistent Excel reports.
-    * `preprocessor.py`: Aggregates transactional data into daily time-series formats.
-    * `ArmstrongCycleTransformer.py`: **(Core IP)** Custom math logic for Pi-Cycle feature generation.
-    * `datagen.py`: Generates 5-years of synthetic sales data for simulation.
-* **`main.py`**: The orchestration script that runs the full pipeline.
+    * `data_cleaner.py`: Logic to scan and merge inconsistent Excel headers.
+    * `ArmstrongCycleTransformer.py`: **(Core IP)** Mathematical modeling of economic cycles.
+    * `datagen.py`: Generates the 5-year simulation dataset.
+    * `preprocessor.py`: Aggregates granular transactions into daily time-series.
+* **`main.py`**: The "Commander" script that orchestrates the pipeline.
 
 ---
 
-## 3. Instructions for Execution
+## 4. How to Run (Instructions)
 
 ### Prerequisites
-1.  Python 3.9+ installed.
-2.  Install dependencies (Pandas, Scikit-Learn, Numpy):
+1.  Python 3.9+
+2.  Install dependencies:
     ```bash
     pip install pandas numpy scikit-learn openpyxl xlrd
     ```
 
-### Running the Pipeline
-The `main.py` script is the single entry point. It features a **toggle** to switch between Real Data and Simulation Mode.
+### Option A: Run in Simulation Mode (Default)
+Use this to see the pipeline in action immediately using generated data.
 
-**Step 1: Configure Mode**
-Open `main.py` and set the toggle:
-```python
-# Set to True to test with generated data (5 years)
-# Set to False to process raw Excel files in data/raw
-USE_SYNTHETIC = True 
-````
+1.  Open `main.py`.
+2.  Ensure the toggle is set to `True`:
+    ```python
+    USE_SYNTHETIC = True 
+    ```
+3.  Run the script:
+    ```bash
+    python main.py
+    ```
+    *Output: The model will train on 1,400+ days of synthetic data and output a Mean Absolute Error (MAE).*
 
-**Step 2: Execute**
+### Option B: Run with Your Own Real Data
+If you have your own retail sales reports, you can use this pipeline to clean and forecast them.
 
-```bash
-python main.py
-```
+1.  **Prepare your Data:**
+    * Place your `.xls` or `.xlsx` files into the `data/raw/` folder.
+    * **Format:** The file can have report titles or empty rows at the top. The script will automatically hunt for the header.
+    * **Required Columns:** Your file must contain at least a **Date** column and a **Sales Amount** column (names are flexible, e.g., `Sales Amt`, `Total Sales`, `Date`).
 
-**Expected Output:**
-The pipeline will output the training logs, the number of days processed, and the final **Mean Absolute Error (MAE)**.
+2.  **Configure `main.py`:**
+    ```python
+    USE_SYNTHETIC = False
+    ```
+
+3.  **Run the script:**
+    ```bash
+    python main.py
+    ```
+    *The pipeline will scrape all Excel files in the folder, merge them, clean the headers, and train the model on your data.*
+
+---
+
+## 5. Pipeline Logic & Methodology
+
+### Phase 1: Intelligent Ingestion (`data_cleaner.py`)
+Retail reports often come with metadata in the first few rows (e.g., "Store POS Sales Report - Generated by Admin"). Standard `pd.read_excel()` fails here.
+* **Solution:** My script scans the first 10 rows of every file. If it finds keywords like `Date` or `SKU`, it dynamically sets that row as the header.
+* **Result:** 0% data loss from formatting errors.
+
+### Phase 2: Feature Engineering (`ArmstrongCycleTransformer.py`)
+Standard Time-Series models often miss long-term macroeconomic shifts. I implemented the **Martin Armstrong Economic Confidence Model (ECM)** to capture this.
+* **Macro Pi Cycle:** $\sin(2\pi \times t / 3141)$ (Models 8.6-year economic shifts).
+* **Business Cycle:** $\sin(2\pi \times t / 365.25)$ (Models annual retail seasonality).
+
+### Phase 3: Modeling (`main.py`)
+* **Algorithm:** Random Forest Regressor (`n_estimators=100`).
+* **Why:** Retail data is non-linear. Sales don't just go up; they spike on holidays and crash during stock-outs. Random Forest handles these outliers better than Linear Regression.
 
 -----
 
-## 4\. Pipeline Logic & Data Flow
-
-The system is orchestrated by `main.py` and follows a strict 4-stage process:
-
-1.  **Ingestion (`data_cleaner.py`)**:
-
-      * Scans `data/raw` for any Excel files.
-      * **Smart Header Detection:** Instead of assuming Row 0 is the header, it scans the first 10 rows to find keywords like "Date" or "SKU". This handles files with title rows or empty space.
-      * **Standardization:** Forces all columns to snake\_case (e.g., `Sales Amt` -\> `sales_amt`).
-
-2.  **Preprocessing (`preprocessor.py`)**:
-
-      * Aggregates granular transaction rows into **Daily Sales Totals**.
-      * Ensures strict datetime sorting to prevent time-leakage in the model.
-
-3.  **Feature Engineering (`ArmstrongCycleTransformer.py`)**:
-
-      * This is the "Secret Sauce." It transforms a simple date into three cyclical features:
-          * **Macro Pi Cycle:** $\sin(2\pi \times t / 3141)$ (8.6 years)
-          * **Quarter Cycle:** $\sin(2\pi \times t / 785)$ (2.15 years)
-          * **Business Cycle:** $\sin(2\pi \times t / 365.25)$ (Yearly Seasonality)
-
-4.  **Modeling & Evaluation (`main.py`)**:
-
-      * **Model:** Random Forest Regressor (`n_estimators=100`).
-      * **Validation:** Time-series split (Train on past, Test on future).
-
------
-
-## 5\. Feature Processing Summary
+## 6\. Feature Processing Summary
 
 | Feature Name | Type | Processing Steps | Rationale |
 | :--- | :--- | :--- | :--- |
@@ -97,7 +106,7 @@ The system is orchestrated by `main.py` and follows a strict 4-stage process:
 
 -----
 
-## 6\. Model Selection & Results
+## 7\. Model Selection & Results
 
 ### Why Random Forest?
 
@@ -113,15 +122,10 @@ We selected **Random Forest** over Linear Regression because retail sales data i
 
 -----
 
-## 7\. Business Impact (The "So What?")
-
-For a retail giant like NTUC FairPrice, accurate forecasting means:
-
-1.  **Reduced Waste:** Fresh produce isn't over-ordered.
-2.  **Stock Availability:** High-demand items (detecting the "Business Cycle") are stocked before the rush.
-3.  **Automation:** Saving hours of manual Excel cleaning every week via `data_cleaner.py`.
-
+## 8. Business Impact
+For a retailer like **NTUC FairPrice**, this pipeline offers:
+1.  **Automation:** Eliminates hours of manual Excel cleaning/merging.
+2.  **Scalability:** Can ingest 1 file or 100 files without code changes.
+3.  **Accuracy:** Incorporates both short-term store trends and long-term economic cycles for better inventory planning.
+   
 <!-- end list -->
-
-```
-```
