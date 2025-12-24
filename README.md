@@ -32,7 +32,7 @@ The project follows a modular, production-grade structure:
     * `ArmstrongCycleTransformer.py`: **(Core IP)** Mathematical modeling of economic cycles.
     * `datagen.py`: Generates the 5-year simulation dataset.
     * `preprocessor.py`: Aggregates granular transactions into daily time-series.
-    * inspector.py: Data validation utility to check processed file integrity. 
+    * `inspector.py`: Data validation utility to check processed file integrity. 
 * **`main.py`**: The "Commander" script that orchestrates the pipeline.
 * **`eda.ipynb`**: **(New)** Jupyter Notebook for visual inspection and feature validation.
 
